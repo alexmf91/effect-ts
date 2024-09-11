@@ -1,15 +1,7 @@
 import { Effect, Layer } from 'effect'
 import { PokeApi } from './services'
-import { PokemonCollection } from './services/PokemonCollection'
-import { BuildPokeApiUrl } from './services/BuildPokeApiUrl'
-import { PokeApiUrl } from './services/PokeApiUrl'
 
-const MainLayer = Layer.mergeAll(
-  PokeApi.Live,
-  PokemonCollection.Live,
-  BuildPokeApiUrl.Live,
-  PokeApiUrl.Live
-)
+const MainLayer = Layer.mergeAll(PokeApi.Live)
 
 // program: Full Effect implementation with errors and dependencies included in the type
 export const program = Effect.gen(function* () {
