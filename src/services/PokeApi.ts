@@ -1,37 +1,41 @@
-import { Effect, Context, ConfigError, Config } from 'effect'
+import { Effect, Context, ConfigError, Config, Layer } from 'effect'
 import { decodePokemon, type Pokemon } from '../schemas'
 import { FetchError, JsonError } from '../errors'
 import type { ParseResult } from '@effect/schema'
+import { BuildPokeApiUrl } from './BuildPokeApiUrl'
+import { PokemonCollection } from './PokemonCollection'
 
 export interface PokeApiImpl {
-  readonly getPokemon: Effect.Effect<
-    typeof Pokemon.Type,
-    FetchError | JsonError | ParseResult.ParseError | ConfigError.ConfigError
-  >
+  readonly getPokemon: Effect.Effect<Pokemon, FetchError | JsonError | ParseResult.ParseError | ConfigError.ConfigError>
 }
 
-export class PokeApi extends Context.Tag('PokeApi')<PokeApi, PokeApiImpl>() {
-  static readonly Live = PokeApi.of({
-    getPokemon: Effect.gen(function* () {
-      const baseUrl = yield* Config.string('BASE_URL')
+const make = {
+  getPokemon: Effect.gen(function* () {
+    const pokemonCollection = yield* PokemonCollection
+    const buildPokeApiUrl = yield* BuildPokeApiUrl
 
-      const response = yield* Effect.tryPromise({
-        try: () => fetch(`${baseUrl}/api/v2/pokemon/garchomp/`),
-        catch: () => new FetchError()
-      })
+    const requestUrl = buildPokeApiUrl({ name: pokemonCollection[0] })
 
-      if (!response.ok) {
-        return yield* new FetchError()
-      }
-
-      const json = yield* Effect.tryPromise({
-        try: () => response.json(),
-        catch: () => new JsonError()
-      })
-
-      return yield* decodePokemon(json)
+    const response = yield* Effect.tryPromise({
+      try: () => fetch(requestUrl),
+      catch: () => new FetchError()
     })
+
+    if (!response.ok) {
+      return yield* new FetchError()
+    }
+
+    const json = yield* Effect.tryPromise({
+      try: () => response.json(),
+      catch: () => new JsonError()
+    })
+
+    return yield* decodePokemon(json)
   })
+}
+
+export class PokeApi extends Context.Tag('PokeApi')<PokeApi, typeof make>() {
+  static readonly Live = Layer.succeed(this, make)
 
   static readonly Test = PokeApi.of({
     getPokemon: Effect.gen(function* () {
