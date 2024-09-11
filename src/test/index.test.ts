@@ -1,15 +1,17 @@
-import { Effect } from 'effect'
+import { Effect, Layer } from 'effect'
 import { afterAll, afterEach, beforeAll, expect, it } from 'vitest'
 
 import { server } from '../utils/test/node'
 import { PokeApi } from '../services'
 import { program } from '../index'
+import { TestConfigProviderLayer } from '../utils/test/testConfigProvider'
 
 beforeAll(() => server.listen())
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
-const mainTest = program.pipe(Effect.provideService(PokeApi, PokeApi.Test))
+const TestMainLayer = PokeApi.Mock.pipe(Layer.provide(TestConfigProviderLayer))
+const mainTest = program.pipe(Effect.provide(TestMainLayer))
 
 it('returns a valid pokemon', async () => {
   const response = await Effect.runPromise(mainTest)
