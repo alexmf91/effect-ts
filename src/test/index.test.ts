@@ -1,4 +1,4 @@
-import { Effect, Layer } from 'effect'
+import { Effect, Layer, ManagedRuntime } from 'effect'
 import { afterAll, afterEach, beforeAll, expect, it } from 'vitest'
 
 import { server } from '../utils/test/node'
@@ -11,10 +11,11 @@ afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
 const TestMainLayer = PokeApi.Mock.pipe(Layer.provide(TestConfigProviderLayer))
-const mainTest = program.pipe(Effect.provide(TestMainLayer))
+
+const TestingRuntime = ManagedRuntime.make(TestMainLayer)
 
 it('returns a valid pokemon', async () => {
-  const response = await Effect.runPromise(mainTest)
+  const response = await TestingRuntime.runPromise(program)
   expect(response).toEqual({
     id: 1,
     height: 10,
