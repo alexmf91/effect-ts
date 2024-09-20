@@ -1,7 +1,10 @@
-import { Effect, Layer } from 'effect'
+import { Effect, Layer, ManagedRuntime } from 'effect'
 import { PokeApi } from './services'
 
 const MainLayer = Layer.mergeAll(PokeApi.Live)
+
+// managedRuntime: Allows to derive a Runtime from a Layer. Includes all the services inside the layer we provide
+const PokemonRuntime = ManagedRuntime.make(MainLayer)
 
 // program: Full Effect implementation with errors and dependencies included in the type
 export const program = Effect.gen(function* () {
@@ -9,11 +12,8 @@ export const program = Effect.gen(function* () {
   return yield* pokeApi.getPokemon
 })
 
-// runnable: Provide all the dependencies to program to make the third type parameter never
-const runnable = program.pipe(Effect.provide(MainLayer))
-
 // main: Handle all (or part of) the errors from runnable to make the second type parameter never
-const main = runnable.pipe(
+const main = program.pipe(
   Effect.catchTags({
     FetchError: () => Effect.succeed('Fetch error'),
     JsonError: () => Effect.succeed('Json error'),
@@ -21,4 +21,4 @@ const main = runnable.pipe(
   })
 )
 
-Effect.runPromise(main).then(console.log)
+PokemonRuntime.runPromise(main).then(console.log)
